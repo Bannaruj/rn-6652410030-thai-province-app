@@ -1,10 +1,18 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import CustomTabBar from "../components/CustomTabBar";
 
 export default function HomeScreen() {
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{
+        alignItems: "center",
+        paddingBottom: 40,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
       <Text
         style={[
           styles.fontcolor,
@@ -29,9 +37,10 @@ export default function HomeScreen() {
       >
         Land of Elephants & Thai Culture
       </Text>
+
       <View style={{ width: "100%", height: 250 }}>
         <Image
-          source={require("../assets/images/thre.jpg")}
+          source={require("../../assets/images/thre.jpg")}
           style={{ width: "100%", height: "100%" }}
         />
 
@@ -45,6 +54,7 @@ export default function HomeScreen() {
           style={styles.bottomFade}
         />
       </View>
+
       <Text
         style={[
           styles.fontcolor,
@@ -62,14 +72,29 @@ export default function HomeScreen() {
       >
         Land of Elephants & Thai Culture
       </Text>
-    </View>
+      <CustomTabBar />
+      <View style={{ width: "100%", padding: 16 }}>
+        <Text
+          style={[
+            styles.fontcolor,
+            { fontSize: 24, fontWeight: "bold", fontFamily: " Kanit_700Bold" },
+          ]}
+        >
+          Top Attractions
+        </Text>
+
+        <Image
+          source={require("../../assets/images/Traditional.jpg")}
+          style={{ width: "100%", height: 200, borderRadius: 10 }}
+        />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
     backgroundColor: "#ebe0d5",
   },
   fontcolor: {

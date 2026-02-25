@@ -13,16 +13,30 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    SplashScreen.hideAsync();
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
     return null;
   }
+
   return (
     <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="HomeScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="EventScreen"
+        options={{
+          title: "Events",
+        }}
+      />
+      <Stack.Screen
+        name="PlaceDetailScreen"
+        options={{
+          title: "Place Detail",
+        }}
+      />
     </Stack>
   );
 }
