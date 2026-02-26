@@ -1,9 +1,58 @@
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { supabase } from "../../lib/supabase";
 import CustomTabBar from "../components/CustomTabBar";
 
+type HighlightEvent = {
+  id: string;
+  name: string;
+  start_month: string | null;
+  end_month: string | null;
+  image_url: string | null;
+};
+
 export default function HomeScreen() {
+  const router = useRouter();
+  const [highlightEvent, setHighlightEvent] = useState<HighlightEvent | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const fetchHighlightEvent = async () => {
+      const { data, error } = await supabase
+        .from("event_tb")
+        .select("id, name, start_month, end_month, image_url")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.log("Supabase highlight event error:", error);
+        return;
+      }
+
+      if (data) {
+        setHighlightEvent(data as HighlightEvent);
+      }
+    };
+
+    fetchHighlightEvent();
+  }, []);
+
+  const dateLabel =
+    highlightEvent?.start_month && highlightEvent?.end_month
+      ? `${highlightEvent.start_month} - ${highlightEvent.end_month}`
+      : highlightEvent?.start_month || highlightEvent?.end_month || "";
+
   return (
     <ScrollView
       style={styles.container}
@@ -101,14 +150,27 @@ export default function HomeScreen() {
             EVENT
           </Text>
 
-          <Image
-            source={require("../../assets/images/elephant.jpg")}
-            style={{
-              width: "100%",
-              height: 200,
-              borderRadius: 10,
-            }}
-          />
+          <View style={styles.eventCard}>
+            <Image
+              source={
+                highlightEvent?.image_url
+                  ? { uri: highlightEvent.image_url }
+                  : require("../../assets/images/elephant.jpg")
+              }
+              style={styles.eventImage}
+            />
+            <View style={styles.eventOverlay}>
+              {dateLabel.length > 0 && (
+                <Text style={styles.eventDateText}>📅{dateLabel}</Text>
+              )}
+              <TouchableOpacity
+                style={styles.viewEventButton}
+                onPress={() => router.push("/(tabs)/EventScreen")}
+              >
+                <Text style={styles.viewEventText}>View Event</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
     </ScrollView>
@@ -139,5 +201,43 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 100,
+  },
+  eventCard: {
+    width: "100%",
+    height: 200,
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  eventImage: {
+    width: "100%",
+    height: "100%",
+  },
+  eventOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  eventDateText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  viewEventButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "#F7F1DE",
+  },
+  viewEventText: {
+    color: "#8B5E3C",
+    fontSize: 13,
+    fontWeight: "600",
   },
 });

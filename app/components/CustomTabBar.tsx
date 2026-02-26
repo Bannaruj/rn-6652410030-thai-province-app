@@ -11,13 +11,29 @@ export default function CustomTabBar() {
     { key: "temples", label: "Temples", icon: "business" as const },
   ];
 
+  const categoryByKey: Record<string, string> = {
+    attractions: "Attraction",
+    restaurants: "Restaurant",
+    cafes: "Cafes",
+    temples: "Temples",
+  };
+
+  const handlePress = (key: string) => {
+    const initialCategory = categoryByKey[key] ?? "All Districts";
+
+    router.push({
+      pathname: "/(tabs)/AttractionScreen",
+      params: { initialCategory },
+    });
+  };
+
   return (
     <View style={styles.container}>
       {items.map((item) => (
         <TouchableOpacity
           key={item.key}
           style={styles.tabItem}
-          onPress={() => router.push("/AttractionScreen")}
+          onPress={() => handlePress(item.key)}
         >
           <View style={[styles.iconContainer]}>
             <Ionicons name={item.icon} size={20} color="#8B5E3C" />

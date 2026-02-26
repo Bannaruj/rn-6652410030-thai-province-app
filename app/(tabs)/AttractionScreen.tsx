@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
@@ -23,10 +23,24 @@ type Place = {
 
 export default function AttractionScreen() {
   const router = useRouter();
-  const [selectedCategory, setSelectedCategory] = useState("All Districts");
+  const { initialCategory } = useLocalSearchParams<{
+    initialCategory?: string;
+  }>();
+
+  const initialCategoryLabel =
+    typeof initialCategory === "string" && initialCategory.length > 0
+      ? initialCategory
+      : "All Districts";
+
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>(initialCategoryLabel);
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedCategory(initialCategoryLabel);
+  }, [initialCategoryLabel]);
 
   useEffect(() => {
     const fetchPlaces = async () => {
@@ -97,7 +111,7 @@ export default function AttractionScreen() {
   }, []);
 
   const category = [
-    "All Districts",
+    "All Category",
     "Attraction",
     "Restaurant",
     "Cafes",
@@ -105,7 +119,7 @@ export default function AttractionScreen() {
   ];
 
   const categoryKeyByLabel: { [key: string]: string | null } = {
-    "All Districts": null,
+    "All Category": null,
     Attraction: "Attraction",
     Restaurant: "Restaurant",
     Cafes: "Cafe",
