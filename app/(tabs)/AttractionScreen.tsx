@@ -70,7 +70,12 @@ export default function AttractionScreen() {
 
         const merged: Place[] =
           (placesData || []).map(
-            (p: { id: string; name: string; address: string; category: string | null }) => ({
+            (p: {
+              id: string;
+              name: string;
+              address: string;
+              category: string | null;
+            }) => ({
               id: p.id,
               name: p.name,
               address: p.address,
@@ -115,7 +120,8 @@ export default function AttractionScreen() {
     }
 
     return places.filter(
-      (p) => p.category && p.category.toLowerCase() === targetCategory.toLowerCase(),
+      (p) =>
+        p.category && p.category.toLowerCase() === targetCategory.toLowerCase(),
     );
   }, [places, selectedCategory]);
 
@@ -141,9 +147,6 @@ export default function AttractionScreen() {
               placeholder="Search places..."
               placeholderTextColor="#c2a88a"
             />
-            <TouchableOpacity>
-              <Ionicons name="options-outline" size={22} color="#886f54" />
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -193,6 +196,12 @@ export default function AttractionScreen() {
                   key={item.id}
                   style={styles.card}
                   activeOpacity={0.85}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/PlaceDetailScreen",
+                      params: { placeId: item.id },
+                    })
+                  }
                 >
                   <Image
                     source={

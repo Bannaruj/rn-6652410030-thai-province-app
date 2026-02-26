@@ -32,11 +32,11 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
-        name="MapScreen"
+        name="EventScreen"
         options={{
-          title: "Map",
+          title: "Event",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="map" size={size} color={color} />
+            <Ionicons name="calendar" size={size} color={color} />
           ),
         }}
       />
