@@ -72,7 +72,13 @@ export default function HomeScreen() {
       >
         Land of Elephants & Thai Culture
       </Text>
-      <View style={{ padding: 16, justifyContent: "center" }}>
+      <View
+        style={{
+          width: "100%",
+          alignItems: "center",
+          paddingVertical: 16,
+        }}
+      >
         <CustomTabBar />
         <Text
           style={[
@@ -81,7 +87,7 @@ export default function HomeScreen() {
               fontSize: 24,
               fontWeight: "bold",
               fontFamily: " Kanit_700Bold",
-              alignSelf: "flex-start",
+              alignSelf: "center",
             },
           ]}
         >
@@ -90,7 +96,13 @@ export default function HomeScreen() {
 
         <Image
           source={require("../../assets/images/elephant.jpg")}
-          style={{ width: "100%", height: 200, borderRadius: 10 }}
+          style={{
+            width: "90%",
+            maxWidth: 500,
+            height: 200,
+            borderRadius: 10,
+            alignSelf: "center",
+          }}
         />
       </View>
     </ScrollView>

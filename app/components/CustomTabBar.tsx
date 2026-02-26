@@ -33,8 +33,10 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     backgroundColor: "#F5EBDD",
-    width: "100%",
-    margin: 20,
+    width: "90%",
+    maxWidth: 500,
+    alignSelf: "center",
+    marginVertical: 20,
     borderRadius: 20,
     paddingVertical: 10,
     justifyContent: "space-around",
