@@ -72,19 +72,24 @@ export default function HomeScreen() {
       >
         Land of Elephants & Thai Culture
       </Text>
-      <CustomTabBar />
-      <View style={{ width: "100%", padding: 16 }}>
+      <View style={{ padding: 16, justifyContent: "center" }}>
+        <CustomTabBar />
         <Text
           style={[
             styles.fontcolor,
-            { fontSize: 24, fontWeight: "bold", fontFamily: " Kanit_700Bold" },
+            {
+              fontSize: 24,
+              fontWeight: "bold",
+              fontFamily: " Kanit_700Bold",
+              alignSelf: "flex-start",
+            },
           ]}
         >
-          Top Attractions
+          EVENT
         </Text>
 
         <Image
-          source={require("../../assets/images/Traditional.jpg")}
+          source={require("../../assets/images/elephant.jpg")}
           style={{ width: "100%", height: 200, borderRadius: 10 }}
         />
       </View>
@@ -96,6 +101,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ebe0d5",
+    paddingTop: 20,
   },
   fontcolor: {
     color: "#886f54",
