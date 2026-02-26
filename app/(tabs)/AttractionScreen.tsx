@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -11,10 +11,85 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "../../lib/supabase";
+
+type Place = {
+  id: string;
+  name: string;
+  address: string;
+  image_url: string | null;
+  category: string | null;
+};
 
 export default function AttractionScreen() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("All Districts");
+  const [places, setPlaces] = useState<Place[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPlaces = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data: placesData, error: placesError } = await supabase
+          .from("places_tb")
+          .select("id, name, address, category");
+
+        const { data: imagesData, error: imagesError } = await supabase
+          .from("place_images_tb")
+          .select("place_id, image_url");
+
+        if (placesError || imagesError) {
+          console.log(
+            "Supabase error (places/images):",
+            placesError,
+            imagesError,
+          );
+          setError(
+            placesError?.message ||
+              imagesError?.message ||
+              "ไม่สามารถดึงข้อมูลสถานที่ได้",
+          );
+          return;
+        }
+
+        console.log("Supabase places data:", placesData);
+        console.log("Supabase images data:", imagesData);
+
+        const imageByPlaceId = new Map<string, string>();
+        (imagesData || []).forEach(
+          (img: { place_id: string; image_url: string }) => {
+            if (!imageByPlaceId.has(img.place_id)) {
+              imageByPlaceId.set(img.place_id, img.image_url);
+            }
+          },
+        );
+
+        const merged: Place[] =
+          (placesData || []).map(
+            (p: { id: string; name: string; address: string; category: string | null }) => ({
+              id: p.id,
+              name: p.name,
+              address: p.address,
+              category: p.category ?? null,
+              image_url: imageByPlaceId.get(p.id) || null,
+            }),
+          ) || [];
+
+        setPlaces(merged);
+      } catch (e: any) {
+        console.log("Unexpected error fetching places:", e);
+        setError("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPlaces();
+  }, []);
 
   const category = [
     "All Districts",
@@ -24,52 +99,40 @@ export default function AttractionScreen() {
     "Temples",
   ];
 
-  const attractions = [
-    {
-      id: "1",
-      title: "Phanom Rung",
-      subtitle: "Historical Park",
-      rating: 4.8,
-      image: require("../../assets/images/thre.jpg"),
-    },
-    {
-      id: "2",
-      title: "Elephant World",
-      subtitle: "Animal Sanctuary",
-      rating: 4.7,
-      image: require("../../assets/images/elephant.jpg"),
-    },
-    {
-      id: "3",
-      title: "Si Narong Castle",
-      subtitle: "Khmer Ruins",
-      rating: 4.6,
-      image: require("../../assets/images/thre.jpg"),
-    },
-    {
-      id: "4",
-      title: "Sam Lan Waterfall",
-      subtitle: "Waterfall",
-      rating: 4.4,
-      image: require("../../assets/images/thre.jpg"),
-    },
-  ];
+  const categoryKeyByLabel: { [key: string]: string | null } = {
+    "All Districts": null,
+    Attraction: "Attraction",
+    Restaurant: "Restaurant",
+    Cafes: "Cafe",
+    Temples: "Temple",
+  };
+
+  const filteredPlaces = useMemo(() => {
+    const targetCategory = categoryKeyByLabel[selectedCategory];
+
+    if (!targetCategory) {
+      return places;
+    }
+
+    return places.filter(
+      (p) => p.category && p.category.toLowerCase() === targetCategory.toLowerCase(),
+    );
+  }, [places, selectedCategory]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#886f54" />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Attractions</Text>
-      </View>
-
       <ScrollView
-        style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={28} color="#886f54" />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Attractions</Text>
+        </View>
+
         <View style={styles.section}>
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#886f54" />
@@ -109,46 +172,63 @@ export default function AttractionScreen() {
               );
             })}
           </View>
-
           <Text style={styles.sectionTitle}>Top attractions in Surin</Text>
 
-          <View style={styles.list}>
-            {attractions.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                activeOpacity={0.85}
-              >
-                <Image source={item.image} style={styles.cardImage} />
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardTitle}>{item.title}</Text>
-                  <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
-                  <View style={styles.cardFooter}>
-                    <View style={styles.starsRow}>
-                      {Array.from({ length: 5 }).map((_, index) => (
+          {loading && (
+            <View style={styles.list}>
+              <Text style={styles.cardSubtitle}>กำลังโหลดข้อมูล...</Text>
+            </View>
+          )}
+
+          {!loading && error && (
+            <View style={styles.list}>
+              <Text style={styles.cardSubtitle}>{error}</Text>
+            </View>
+          )}
+
+          {!loading && !error && (
+            <View style={styles.list}>
+              {filteredPlaces.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.card}
+                  activeOpacity={0.85}
+                >
+                  <Image
+                    source={
+                      item.image_url
+                        ? { uri: item.image_url }
+                        : require("../../assets/images/not found.png")
+                    }
+                    style={styles.cardImage}
+                  />
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle}>{item.name}</Text>
+                    <Text style={styles.cardSubtitle}>{item.address}</Text>
+                    {item.category && (
+                      <View style={styles.categoryBadge}>
                         <Ionicons
-                          key={index}
-                          name={
-                            index < Math.round(item.rating)
-                              ? "star"
-                              : "star-outline"
-                          }
+                          name="pricetag-outline"
                           size={14}
-                          color="#F6B100"
+                          color="#8B5E3C"
                         />
-                      ))}
-                    </View>
-                    <Text style={styles.ratingText}>
-                      {item.rating.toFixed(1)}
-                    </Text>
+                        <Text style={styles.categoryBadgeText}>
+                          {item.category}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                </View>
-                <View style={styles.pinIconWrapper}>
-                  <Ionicons name="location-outline" size={18} color="#8B5E3C" />
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <View style={styles.pinIconWrapper}>
+                    <Ionicons
+                      name="location-outline"
+                      size={18}
+                      color="#8B5E3C"
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -164,7 +244,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 24,
   },
   header: {
@@ -214,9 +294,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F7F1DE",
     marginTop: 8,
+    marginHorizontal: -16,
     paddingHorizontal: 16,
     paddingTop: 12,
-    borderRadius: 20,
+    paddingBottom: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   categoryRow: {
     flexDirection: "row",
@@ -294,6 +377,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginTop: 6,
+  },
+  categoryBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: "#E6D8C3",
+  },
+  categoryBadgeText: {
+    marginLeft: 4,
+    fontSize: 11,
+    color: "#5a4633",
+    fontWeight: "500",
   },
 
   starsRow: {
