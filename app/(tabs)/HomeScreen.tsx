@@ -80,30 +80,36 @@ export default function HomeScreen() {
         }}
       >
         <CustomTabBar />
-        <Text
-          style={[
-            styles.fontcolor,
-            {
-              fontSize: 24,
-              fontWeight: "bold",
-              fontFamily: " Kanit_700Bold",
-              alignSelf: "center",
-            },
-          ]}
-        >
-          EVENT
-        </Text>
-
-        <Image
-          source={require("../../assets/images/elephant.jpg")}
+        <View
           style={{
             width: "90%",
             maxWidth: 500,
-            height: 200,
-            borderRadius: 10,
-            alignSelf: "center",
           }}
-        />
+        >
+          <Text
+            style={[
+              styles.fontcolor,
+              {
+                fontSize: 24,
+                fontWeight: "bold",
+                fontFamily: " Kanit_700Bold",
+                alignSelf: "flex-start",
+                marginBottom: 8,
+              },
+            ]}
+          >
+            EVENT
+          </Text>
+
+          <Image
+            source={require("../../assets/images/elephant.jpg")}
+            style={{
+              width: "100%",
+              height: 200,
+              borderRadius: 10,
+            }}
+          />
+        </View>
       </View>
     </ScrollView>
   );
