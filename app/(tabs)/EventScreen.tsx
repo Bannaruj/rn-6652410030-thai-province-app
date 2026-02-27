@@ -181,6 +181,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
+    width: "100%",
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 8,
@@ -198,8 +199,7 @@ const styles = StyleSheet.create({
     color: "#886f54",
   },
   section: {
-    marginTop: 4,
-    paddingHorizontal: 20,
+    marginTop: 8,
   },
   searchContainer: {
     flexDirection: "row",
@@ -220,8 +220,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F7F1DE",
     marginTop: 8,
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 24,
     borderTopLeftRadius: 20,
