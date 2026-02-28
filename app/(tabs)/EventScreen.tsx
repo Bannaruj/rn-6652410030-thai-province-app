@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +14,39 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
+
+const THAI_MONTH_TO_NUMBER: Record<string, number> = {
+  มกราคม: 0,
+  กุมภาพันธ์: 1,
+  มีนาคม: 2,
+  เมษายน: 3,
+  พฤษภาคม: 4,
+  มิถุนายน: 5,
+  กรกฎาคม: 6,
+  สิงหาคม: 7,
+  กันยายน: 8,
+  ตุลาคม: 9,
+  พฤศจิกายน: 10,
+  ธันวาคม: 11,
+};
+
+function parseEventDate(startMonth: string | null): Date | null {
+  if (!startMonth || typeof startMonth !== "string") return null;
+  const trimmed = startMonth.trim();
+  const match = trimmed.match(/^(\d{1,2})\s+(.+)$/);
+  if (!match) return null;
+  const day = parseInt(match[1], 10);
+  const monthName = match[2].trim();
+  const month = THAI_MONTH_TO_NUMBER[monthName];
+  if (month === undefined || day < 1 || day > 31) return null;
+  const now = new Date();
+  let year = now.getFullYear();
+  let date = new Date(year, month, day, 8, 0, 0);
+  if (date.getTime() <= now.getTime()) {
+    date = new Date(year + 1, month, day, 8, 0, 0);
+  }
+  return date;
+}
 
 type EventItem = {
   id: string;
@@ -28,9 +63,7 @@ export default function EventScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All Events");
-
-  const category = ["All Events"];
+  const [remindedEventIds, setRemindedEventIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -75,6 +108,99 @@ export default function EventScreen() {
     });
   }, [events, searchQuery]);
 
+  const handleRemindPress = useCallback(async (event: EventItem, isReminded: boolean) => {
+    if (isReminded) {
+      try {
+        const Notifications = await import("expo-notifications");
+        if (typeof Notifications.cancelScheduledNotificationAsync !== "function") return;
+        const scheduled = await Notifications.getAllScheduledNotificationsAsync?.();
+        if (!scheduled || !Array.isArray(scheduled)) return;
+        for (const n of scheduled) {
+          const data = n.content?.data;
+          const eventId = data && typeof data === "object" && "eventId" in data ? String(data.eventId) : null;
+          if (eventId === event.id && n.identifier) {
+            await Notifications.cancelScheduledNotificationAsync(n.identifier);
+          }
+        }
+        setRemindedEventIds((prev) => {
+          const next = new Set(prev);
+          next.delete(event.id);
+          return next;
+        });
+        Alert.alert("ยกเลิกแจ้งเตือนแล้ว", `ยกเลิกการแจ้งเตือนสำหรับ ${event.name}`);
+      } catch {
+        Alert.alert("ไม่รองรับใน Expo Go", "ยกเลิกแจ้งเตือนใช้ได้กับ development build เท่านั้น");
+      }
+      return;
+    }
+
+    const eventDate = parseEventDate(event.start_month);
+    if (!eventDate) {
+      Alert.alert("ไม่สามารถตั้งแจ้งเตือนได้", "รูปแบบวันจัดงานไม่รองรับ");
+      return;
+    }
+    let Notifications: typeof import("expo-notifications");
+    try {
+      Notifications = await import("expo-notifications");
+    } catch {
+      Alert.alert(
+        "ไม่รองรับใน Expo Go",
+        "การแจ้งเตือนวันเทศกาลใช้ได้กับ development build เท่านั้น กรุณา build แอปด้วยคำสั่ง npx expo run:android หรือใช้ development build",
+      );
+      return;
+    }
+    if (typeof Notifications.scheduleNotificationAsync !== "function") {
+      Alert.alert("ไม่รองรับ", "การแจ้งเตือนไม่พร้อมใช้งานบนอุปกรณ์นี้");
+      return;
+    }
+    try {
+      if (Notifications.setNotificationHandler) {
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowBanner: true,
+            shouldShowList: true,
+            shouldPlaySound: true,
+            shouldSetBadge: false,
+          }),
+        });
+      }
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      let status = existing;
+      if (existing !== "granted") {
+        const { status: requested } = await Notifications.requestPermissionsAsync();
+        status = requested;
+      }
+      if (status !== "granted") {
+        Alert.alert("ต้องการสิทธิ์แจ้งเตือน", "เปิดการแจ้งเตือนในตั้งค่าเพื่อรับการเตือนวันเทศกาล");
+        return;
+      }
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("events", {
+          name: "เทศกาล",
+          importance: Notifications.AndroidImportance.DEFAULT,
+        });
+      }
+      const trigger: import("expo-notifications").NotificationTriggerInput = {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: eventDate,
+        ...(Platform.OS === "android" && { channelId: "events" }),
+      };
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "วันเทศกาล",
+          body: `${event.name} - วันนี้มีงานเทศกาล`,
+          data: { eventId: String(event.id) },
+        },
+        trigger,
+      });
+      setRemindedEventIds((prev) => new Set(prev).add(event.id));
+      Alert.alert("ตั้งแจ้งเตือนแล้ว", `จะแจ้งเตือนในวัน${event.start_month || "จัดงาน"}`);
+    } catch (e) {
+      console.warn("Schedule notification error:", e);
+      Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถตั้งแจ้งเตือนได้");
+    }
+  }, []);
+
   const renderContent = () => {
     if (loading) {
       return <Text style={styles.helperText}>กำลังโหลดข้อมูลอีเวนต์...</Text>;
@@ -94,37 +220,52 @@ export default function EventScreen() {
 
     return (
       <View style={styles.list}>
-        {filteredEvents.map((event) => (
-          <View key={event.id} style={styles.card}>
-            <Image
-              source={
-                event.image_url
-                  ? { uri: event.image_url }
-                  : require("../../assets/images/not found.png")
-              }
-              style={styles.cardImage}
-            />
+        {filteredEvents.map((event) => {
+          const isReminded = remindedEventIds.has(event.id);
+          return (
+            <View key={event.id} style={styles.card}>
+              <Image
+                source={
+                  event.image_url
+                    ? { uri: event.image_url }
+                    : require("../../assets/images/not found.png")
+                }
+                style={styles.cardImage}
+              />
 
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{event.name}</Text>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>{event.name}</Text>
 
-              <View style={styles.dateRow}>
-                <Ionicons name="calendar-outline" size={14} color="#8B5E3C" />
-                <Text style={styles.dateText}>
-                  {event.start_month && event.end_month
-                    ? `${event.start_month} - ${event.end_month}`
-                    : event.start_month || event.end_month || "ไม่ระบุช่วงเวลา"}
-                </Text>
+                <View style={styles.dateRow}>
+                  <Ionicons name="calendar-outline" size={14} color="#8B5E3C" />
+                  <Text style={styles.dateText}>
+                    {event.start_month && event.end_month
+                      ? `${event.start_month} - ${event.end_month}`
+                      : event.start_month || event.end_month || "ไม่ระบุช่วงเวลา"}
+                  </Text>
+                </View>
+
+                {event.description && (
+                  <Text numberOfLines={2} style={styles.cardDescription}>
+                    {event.description}
+                  </Text>
+                )}
               </View>
 
-              {event.description && (
-                <Text numberOfLines={2} style={styles.cardDescription}>
-                  {event.description}
-                </Text>
-              )}
+              <TouchableOpacity
+                style={styles.bellButton}
+                onPress={() => handleRemindPress(event, isReminded)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons
+                  name={isReminded ? "notifications" : "notifications-outline"}
+                  size={22}
+                  color={isReminded ? "#8B5E3C" : "#8B7A6B"}
+                />
+              </TouchableOpacity>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
     );
   };
@@ -301,6 +442,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 13,
     color: "#5a4633",
+  },
+  bellButton: {
+    justifyContent: "center",
+    paddingHorizontal: 10,
   },
   helperText: {
     fontSize: 14,
