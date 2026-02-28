@@ -20,6 +20,8 @@ type PlaceDetail = {
   description: string | null;
   latitude: number | null;
   longitude: number | null;
+  category: string | null;
+  phone: string | null;
 };
 
 type PlaceImage = {
@@ -50,7 +52,7 @@ export default function PlaceDetailScreen() {
         const { data: placeData, error: placeError } = await supabase
           .from("places_tb")
           .select(
-            "id, name, address, description, latitude, longitude",
+            "id, name, address, description, latitude, longitude, category, phone",
           )
           .eq("id", placeId)
           .single();
@@ -89,6 +91,17 @@ export default function PlaceDetailScreen() {
 
     const url = `https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`;
     Linking.openURL(url);
+  };
+
+  const showPhone =
+    place?.phone &&
+    place?.category &&
+    ["restaurant", "cafe"].includes(place.category.toLowerCase());
+
+  const handleCall = () => {
+    if (!place?.phone) return;
+    const telNumber = place.phone.replace(/\s|-/g, "");
+    Linking.openURL(`tel:${telNumber}`);
   };
 
   return (
@@ -139,6 +152,16 @@ export default function PlaceDetailScreen() {
                 <Ionicons name="navigate" size={18} color="#F7F1DE" />
                 <Text style={styles.navigateText}>Navigate</Text>
               </TouchableOpacity>
+
+              {showPhone && (
+                <View style={styles.phoneRow}>
+                  <Ionicons name="call-outline" size={18} color="#8B5E3C" />
+                  <Text style={styles.phoneLabel}>เบอร์โทร</Text>
+                  <TouchableOpacity onPress={handleCall} style={styles.phoneButton}>
+                    <Text style={styles.phoneText}>{place.phone}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             <View style={styles.sectionCard}>
@@ -244,6 +267,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#F7F1DE",
+  },
+  phoneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    flexWrap: "wrap",
+  },
+  phoneLabel: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: "#5a4633",
+    fontWeight: "600",
+  },
+  phoneButton: {
+    marginLeft: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: "#E6D8C3",
+    borderRadius: 12,
+  },
+  phoneText: {
+    fontSize: 14,
+    color: "#8B5E3C",
+    fontWeight: "600",
   },
   sectionCard: {
     backgroundColor: "#F7F1DE",
