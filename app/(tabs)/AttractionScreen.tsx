@@ -30,13 +30,14 @@ export default function AttractionScreen() {
   const initialCategoryLabel =
     typeof initialCategory === "string" && initialCategory.length > 0
       ? initialCategory
-      : "All Districts";
+      : "All Category";
 
   const [selectedCategory, setSelectedCategory] =
     useState<string>(initialCategoryLabel);
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     setSelectedCategory(initialCategoryLabel);
@@ -128,16 +129,24 @@ export default function AttractionScreen() {
 
   const filteredPlaces = useMemo(() => {
     const targetCategory = categoryKeyByLabel[selectedCategory];
+    const q = searchQuery.trim().toLowerCase();
 
-    if (!targetCategory) {
-      return places;
-    }
+    return places.filter((p) => {
+      const matchesCategory =
+        !targetCategory ||
+        (p.category &&
+          p.category.toLowerCase() === targetCategory.toLowerCase());
 
-    return places.filter(
-      (p) =>
-        p.category && p.category.toLowerCase() === targetCategory.toLowerCase(),
-    );
-  }, [places, selectedCategory]);
+      if (!matchesCategory) return false;
+
+      if (!q) return true;
+
+      const name = p.name?.toLowerCase() || "";
+      const address = p.address?.toLowerCase() || "";
+
+      return name.includes(q) || address.includes(q);
+    });
+  }, [places, selectedCategory, searchQuery, categoryKeyByLabel]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -160,6 +169,8 @@ export default function AttractionScreen() {
               style={styles.searchInput}
               placeholder="Search places..."
               placeholderTextColor="#c2a88a"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
         </View>
@@ -269,6 +280,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingHorizontal: 20,
     paddingBottom: 24,
+    flexGrow: 1,
   },
   header: {
     width: "100%",
@@ -317,8 +329,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F7F1DE",
     marginTop: 8,
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 24,
     borderTopLeftRadius: 20,

@@ -33,6 +33,13 @@ export default function RootLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "Spash Screen",
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }
